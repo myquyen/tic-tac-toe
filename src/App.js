@@ -116,14 +116,14 @@ class Game extends React.Component {
     this.state = {
       squares: Array(9).fill(null),
       XNext: true,
-      winner: null,
-      history: [Array(9).fill(null)]
+      history: [Array(9).fill(null)],
+      stepNumber: 0
     };
   }
 
   handleClick(i) {
     let squares = this.state.squares.slice();
-    let history = this.state.history.concat([squares]);
+    let history = this.state.history.slice(0, this.state.stepNumber + 1);
 
     if (calculateWinner(squares) || squares[i]) {
       return;
@@ -133,7 +133,8 @@ class Game extends React.Component {
     this.setState({
       squares: squares,
       XNext: !this.state.XNext,
-      history: history
+      history: history.concat([squares]),
+      stepNumber: history.length
     });
   }
 
@@ -147,7 +148,7 @@ class Game extends React.Component {
   }
 
   jumpTo = (move, i) => {
-    this.setState({ XNext: i % 2 === 0, squares: move });
+    this.setState({ squares: move, stepNumber: i, XNext: i % 2 === 0 });
   };
 
   render() {
@@ -163,18 +164,6 @@ class Game extends React.Component {
     return (
       <div>
         <div className="status">{status}</div>
-        <button
-          onClick={() =>
-            this.setState({
-              squares: Array(9).fill(null),
-              XNext: true,
-              winner: null,
-              history: [Array(9).fill(null)]
-            })
-          }
-        >
-          Restart Game
-        </button>
         <div className="board-row">
           {this.renderSquare(0)}
           {this.renderSquare(1)}
@@ -193,8 +182,8 @@ class Game extends React.Component {
         <ol>
           {this.state.history.map((move, i) => {
             return (
-              <li>
-                <button disabled={winner} onClick={() => this.jumpTo(move, i)}>
+              <li key={i}>
+                <button onClick={() => this.jumpTo(move, i)}>
                   {i === 0 ? `Game Start` : `Go to Move ${i}`}
                 </button>
               </li>
