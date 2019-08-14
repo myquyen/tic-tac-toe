@@ -1,5 +1,9 @@
 import React from "react";
+import FacebookLogin from "react-facebook-login";
+
 import "./App.css";
+import { stringify } from "querystring";
+import { async } from "q";
 
 function calculateWinner(squares) {
   const lines = [
@@ -30,86 +34,6 @@ class Square extends React.Component {
   }
 }
 
-class Board extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      squares: Array(9).fill(null),
-      XNext: true,
-      winner: null,
-      history: [{ name: "Game Start", board: Array(9).fill(null) }],
-      turn: 0
-    };
-  }
-
-  handleClick(i) {
-    if (!this.state.winner) {
-      let squares = this.state.squares;
-      let history = this.state.history;
-      let turn = this.state.turn + 1;
-      squares[i] = this.state.XNext ? "X" : "O";
-      history.push({ name: `Go to move ${turn}`, board: squares });
-      this.setState({
-        squares: squares,
-        XNext: !this.state.XNext,
-        winner: calculateWinner(this.state.squares),
-        history: history,
-        turn: turn
-      });
-    }
-  }
-
-  renderSquare(i) {
-    return (
-      <Square
-        value={this.state.squares[i]}
-        handleClick={() => this.handleClick(i)}
-      />
-    );
-  }
-
-  render() {
-    console.log(this.state, this.history);
-    let status;
-    if (this.state.winner) {
-      status = `Winner is ${this.state.winner}`;
-    } else {
-      status = `Next player: ${this.state.XNext ? "X" : "O"}`;
-    }
-
-    return (
-      <div>
-        <div className="status">{status}</div>
-        <div className="board-row">
-          {this.renderSquare(0)}
-          {this.renderSquare(1)}
-          {this.renderSquare(2)}
-        </div>
-        <div className="board-row">
-          {this.renderSquare(3)}
-          {this.renderSquare(4)}
-          {this.renderSquare(5)}
-        </div>
-        <div className="board-row">
-          {this.renderSquare(6)}
-          {this.renderSquare(7)}
-          {this.renderSquare(8)}
-        </div>
-        <ol>
-          {this.state.history.map(move => {
-            return (
-              <li>
-                <button onClick={() => console.log(move.board)}>
-                  {move.name}
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-      </div>
-    );
-  }
-}
 class Game extends React.Component {
   constructor(props) {
     super(props);
@@ -117,9 +41,56 @@ class Game extends React.Component {
       squares: Array(9).fill(null),
       XNext: true,
       history: [Array(9).fill(null)],
-      stepNumber: 0
+      stepNumber: 0,
+      highScores: [],
+      timeIn: Date.now(),
+      timeOut: null
     };
   }
+
+  componentDidMount() {
+    let currentUser = localStorage.getItem("FbLogin");
+    if (currentUser !== null) {
+      this.setState({ currentUser: JSON.parse(currentUser) });
+    }
+    this.getHighScore();
+    // this.postScore();
+  }
+
+  getHighScore = async () => {
+    try {
+      let response = await fetch(
+        "http://ftw-highscores.herokuapp.com/tictactoe-dev?limit=20"
+      );
+      let jsonData = await response.json();
+      this.setState({ highScores: jsonData.items });
+    } catch {
+      this.setState({ hasError: true });
+    }
+  };
+
+  postScore = async () => {
+    try {
+      let data = new URLSearchParams();
+      let score = this.state.timeOut - this.state.timeIn;
+
+      data.append("player", this.state.currentUser.name);
+      data.append("score", score);
+      console.log("SCORE", score);
+      const url = "http://ftw-highscores.herokuapp.com/tictactoe-dev";
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: data.toString(),
+        json: true
+      });
+      if (response.status == 200) this.getHighScore();
+    } catch (TypeError) {
+      alert("You need to login first!");
+    }
+  };
 
   handleClick(i) {
     let squares = this.state.squares.slice();
@@ -151,47 +122,98 @@ class Game extends React.Component {
     this.setState({ squares: move, stepNumber: i, XNext: i % 2 === 0 });
   };
 
+  responseFacebook = response => {
+    if (response && response.status !== "unknown") {
+      localStorage.setItem("FbLogin", JSON.stringify(response));
+      this.setState({ currentUser: response });
+    }
+  };
+
+  logout = () => {
+    localStorage.removeItem("FbLogin");
+    this.setState({ currentUser: null });
+  };
+
   render() {
-    // console.log("NOTHING", this.state);
+    // console.log("RED", this.state);
     let status;
     let winner = calculateWinner(this.state.squares);
-    if (winner) {
+    if (winner && !this.state.timeOut) {
       status = `Winner is ${winner}`;
+      this.setState({ timeOut: Date.now() });
     } else {
       status = `Next player: ${this.state.XNext ? "X" : "O"}`;
     }
 
-    return (
-      <div>
-        <div className="status">{status}</div>
-        <div className="board-row">
-          {this.renderSquare(0)}
-          {this.renderSquare(1)}
-          {this.renderSquare(2)}
+    if (this.state.hasError) {
+      return <h1>Oops! Something went wrong.</h1>;
+    } else {
+      return (
+        <div className="App">
+          <div className="body">
+            <h2>{this.score}</h2>
+            <ol id="highScore">
+              <h3>High Scores</h3>
+              {this.state.highScores.map(score => {
+                return (
+                  <li>
+                    {score.player}: {score.score}
+                  </li>
+                );
+              })}
+            </ol>
+            <div>
+              {this.state.currentUser ? (
+                <>
+                  <h2>{this.state.currentUser.name}</h2>
+                  <button id="logout" onClick={this.logout}>
+                    Log Out
+                  </button>
+                </>
+              ) : (
+                <FacebookLogin
+                  autoLoad={true}
+                  appId="973802842965767"
+                  fields="name,email,picture"
+                  callback={resp => this.responseFacebook(resp)}
+                />
+              )}
+              <hr />
+              <div className="status">{status}</div>
+              <div className="board-row">
+                {this.renderSquare(0)}
+                {this.renderSquare(1)}
+                {this.renderSquare(2)}
+              </div>
+              <div className="board-row">
+                {this.renderSquare(3)}
+                {this.renderSquare(4)}
+                {this.renderSquare(5)}
+              </div>
+              <div className="board-row">
+                {this.renderSquare(6)}
+                {this.renderSquare(7)}
+                {this.renderSquare(8)}
+              </div>
+              <hr />
+              <button onClick={this.postScore}>Post new score</button>
+            </div>
+            <ol>
+              <h3>Moves</h3>
+              {this.state.history.map((move, i) => {
+                return (
+                  <li key={i}>
+                    <button onClick={() => this.jumpTo(move, i)}>
+                      {i === 0 ? `Game Start` : `Go to Move ${i}`}
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
         </div>
-        <div className="board-row">
-          {this.renderSquare(3)}
-          {this.renderSquare(4)}
-          {this.renderSquare(5)}
-        </div>
-        <div className="board-row">
-          {this.renderSquare(6)}
-          {this.renderSquare(7)}
-          {this.renderSquare(8)}
-        </div>
-        <ol>
-          {this.state.history.map((move, i) => {
-            return (
-              <li key={i}>
-                <button onClick={() => this.jumpTo(move, i)}>
-                  {i === 0 ? `Game Start` : `Go to Move ${i}`}
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-      </div>
-    );
+      );
+    }
   }
 }
 

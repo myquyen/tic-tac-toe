@@ -1,22 +1,17 @@
 .App {
   text-align: center;
-}
-
-.App-logo {
-  animation: App-logo-spin infinite 20s linear;
-  height: 40vmin;
-  pointer-events: none;
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  align-items: center;
+  height: 80vh;
+}
+
+.body {
+  display: flex;
+  width: 100vw;
+  flex-direction: row;
+  justify-content: space-evenly;
 }
 
 body {
@@ -43,15 +38,15 @@ ul {
   background: #fff;
   border: 1px solid #999;
   float: left;
-  font-size: 24px;
+  font-size: 50px;
   font-weight: bold;
   line-height: 34px;
-  height: 34px;
+  height: 80px;
   margin-right: -1px;
   margin-top: -1px;
   padding: 0;
   text-align: center;
-  width: 34px;
+  width: 80px;
 }
 
 .square:disabled {
@@ -76,4 +71,12 @@ ul {
 
 li {
   margin-top: 0.5rem;
+}
+
+#highScore {
+  text-align: left;
+}
+
+#logout {
+  margin-bottom: 10px;
 }
