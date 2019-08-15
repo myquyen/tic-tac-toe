@@ -2,8 +2,6 @@ import React from "react";
 import FacebookLogin from "react-facebook-login";
 
 import "./App.css";
-import { stringify } from "querystring";
-import { async } from "q";
 
 function calculateWinner(squares) {
   const lines = [
@@ -60,7 +58,7 @@ class Game extends React.Component {
   getHighScore = async () => {
     try {
       let response = await fetch(
-        "http://ftw-highscores.herokuapp.com/tictactoe-dev?limit=20"
+        "http://ftw-highscores.herokuapp.com/tictactoe-dev?reverse=true&limit=20"
       );
       let jsonData = await response.json();
       this.setState({ highScores: jsonData.items });
@@ -151,7 +149,6 @@ class Game extends React.Component {
       return (
         <div className="App">
           <div className="body">
-            <h2>{this.score}</h2>
             <ol id="highScore">
               <h3>High Scores</h3>
               {this.state.highScores.map(score => {
@@ -179,7 +176,13 @@ class Game extends React.Component {
                 />
               )}
               <hr />
-              <div className="status">{status}</div>
+              <div className="status">
+                <h3>
+                  {this.state.timeOut
+                    ? `Score: ${this.state.timeOut - this.state.timeIn}`
+                    : status}
+                </h3>
+              </div>
               <div className="board-row">
                 {this.renderSquare(0)}
                 {this.renderSquare(1)}
